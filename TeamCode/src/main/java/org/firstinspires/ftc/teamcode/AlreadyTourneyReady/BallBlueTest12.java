@@ -57,7 +57,7 @@ public class BallBlueTest12 extends OpMode {
             -230,   // Preload position
             -15,   // Position 1
             -5,   // Position 2
-            130,   // Position 3
+            230,   // Position 3
             400,   // Position 4
             500    // Position 5
     };
@@ -490,7 +490,12 @@ public class BallBlueTest12 extends OpMode {
             case 17: // FINAL - Stop everything
                 // Close turret stopper
                 turretServo.setPosition(TURRET_HOME);
+                turretMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                turretMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                turretMotorActive = false;
+                turretReachedTarget = false;
 
+                currentShotIndex++; // Move to shot 2 configuration
                 // Stop intake
                 intakeMotor.setVelocity(0);
 

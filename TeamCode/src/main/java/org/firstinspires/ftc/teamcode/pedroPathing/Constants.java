@@ -34,7 +34,7 @@ public class Constants {
 
     // ---------- Mecanum Drive ----------
     public static MecanumConstants driveConstants = new MecanumConstants()
-            .maxPower(0.73)
+            .maxPower(0.93)
             .leftFrontMotorName("front_left_drive")
             .leftRearMotorName("back_left_drive")
             .rightFrontMotorName("front_right_drive")
@@ -58,8 +58,7 @@ public class Constants {
 
     // ---------- Path Constraints ----------
     public static PathConstraints pathConstraints = new PathConstraints
-            (0.99, 100, 0.77, 0.89);
-
+            (0.995, 99, 0.97, 0.93);
 
     // ---------- Follower Builder ----------
     public static Follower createFollower(HardwareMap hardwareMap) {
