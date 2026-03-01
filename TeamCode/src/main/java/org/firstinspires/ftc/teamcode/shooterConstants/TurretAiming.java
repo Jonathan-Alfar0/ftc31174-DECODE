@@ -37,10 +37,10 @@ public class TurretAiming {
     // ==================== GOAL POSITIONS ====================
 
     /** RED alliance goal (x, y in inches) - TODO: SET THESE! */
-    private static final Pose RED_GOAL = new Pose(133.53044654939106, 139.9445196211096);
+    private static final Pose RED_GOAL = new Pose(137.53044654939106, 139.9445196211096);
 
     /** BLUE alliance goal (x, y in inches) - TODO: SET THESE! */
-    private static final Pose BLUE_GOAL = new Pose(10.4695534506, 139.9445196211096);
+    private static final Pose BLUE_GOAL = new Pose(13.4695534506, 139.9445196211096);
 
     private Alliance currentAlliance = Alliance.BLUE;
 
@@ -52,7 +52,7 @@ public class TurretAiming {
     // TODO: MEASURE AND SET THESE BASED ON YOUR PHYSICAL LIMITS!
 
     /** Minimum turret angle (radians) - robot-relative, can't go further counter-clockwise */
-    private static final double TURRET_MIN_ANGLE_RAD = Math.toRadians(-88);
+    private static final double TURRET_MIN_ANGLE_RAD = Math.toRadians(-96);
 
     /** Maximum turret angle (radians) - robot-relative, can't go further clockwise */
     private static final double TURRET_MAX_ANGLE_RAD = Math.toRadians(90);
@@ -69,19 +69,28 @@ public class TurretAiming {
     // ==================== CONTROL CONSTANTS ====================
 
     /** Power when moving turret to target */
-    private static final double TURRET_MOVE_P = 0.004;
+    private static final double TURRET_MOVE_P = 0.005;
 
     /** Maximum power for large turret movements (slew) */
-    private static final double TURRET_SLEW_POWER_LIMIT = 0.55;
+    private static final double TURRET_SLEW_POWER_LIMIT = 0.57;
 
     /** Minimum power to hold position (prevent drift) */
-    private static final double TURRET_HOLD_POWER = 0.05;
+    private static final double TURRET_HOLD_POWER = 0.052;
 
     /** Proportional gain for position holding */
     private static final double TURRET_HOLD_KP = 0.003;
 
     /** How close to target counts as "at target" (ticks) */
     private static final int TURRET_TOLERANCE_TICKS = 10;
+
+    /**
+     * Tighter tolerance used specifically for zeroing before a vision correction cycle.
+     * We want the turret to be genuinely close to zero — within ~3 degrees —
+     * before we trust the Limelight pose. Loosen or tighten to taste.
+     *
+     * At TURRET_TICKS_PER_RADIAN ≈ 255 ticks/rad, 3 degrees ≈ 13 ticks.
+     */
+    private static final int TURRET_ZERO_TOLERANCE_TICKS = 13;
 
     /** Limelight proportional gain for fine adjustment */
     private static final double LIMELIGHT_KP = 0.0065;
@@ -322,25 +331,21 @@ public class TurretAiming {
      * Uses linear interpolation between the two nearest data points.
      */
     private double getTimeOfFlight(double distanceInches) {
-        // Below minimum distance — clamp to first entry
         if (distanceInches <= TIME_OF_FLIGHT_TABLE[0][0]) {
             return TIME_OF_FLIGHT_TABLE[0][1];
         }
-        // Above maximum distance — clamp to last entry
         if (distanceInches >= TIME_OF_FLIGHT_TABLE[TIME_OF_FLIGHT_TABLE.length - 1][0]) {
             return TIME_OF_FLIGHT_TABLE[TIME_OF_FLIGHT_TABLE.length - 1][1];
         }
-        // Find the bracketing pair and linearly interpolate
         for (int i = 0; i < TIME_OF_FLIGHT_TABLE.length - 1; i++) {
             double d0 = TIME_OF_FLIGHT_TABLE[i][0];
             double d1 = TIME_OF_FLIGHT_TABLE[i + 1][0];
             if (distanceInches >= d0 && distanceInches <= d1) {
-                double t = (distanceInches - d0) / (d1 - d0);   // 0.0 → 1.0
+                double t = (distanceInches - d0) / (d1 - d0);
                 return TIME_OF_FLIGHT_TABLE[i][1]
                         + t * (TIME_OF_FLIGHT_TABLE[i + 1][1] - TIME_OF_FLIGHT_TABLE[i][1]);
             }
         }
-        // Fallback (should never reach here)
         return TIME_OF_FLIGHT_TABLE[TIME_OF_FLIGHT_TABLE.length - 1][1];
     }
 
@@ -351,24 +356,16 @@ public class TurretAiming {
 
     // ==================== VELOCITY ESTIMATION ====================
 
-    /**
-     * Estimates robot velocity in field frame (inches/sec) using finite differences
-     * between consecutive odometry poses, with a low-pass filter to reduce noise.
-     *
-     * Called every loop so velocity is always fresh.
-     */
     private void updateVelocityEstimate(Pose robotPose) {
         long nowNs = System.nanoTime();
 
         if (lastRobotPose != null && lastUpdateTimeNs != 0) {
             double dtSecs = (nowNs - lastUpdateTimeNs) / 1_000_000_000.0;
 
-            // Guard against division by zero or absurdly small dt
             if (dtSecs > 0.001 && dtSecs < 0.5) {
                 double rawVx = (robotPose.getX() - lastRobotPose.getX()) / dtSecs;
                 double rawVy = (robotPose.getY() - lastRobotPose.getY()) / dtSecs;
 
-                // Low-pass filter to smooth out encoder noise
                 robotVelocityX = VELOCITY_FILTER_ALPHA * robotVelocityX
                         + (1.0 - VELOCITY_FILTER_ALPHA) * rawVx;
                 robotVelocityY = VELOCITY_FILTER_ALPHA * robotVelocityY
@@ -394,7 +391,7 @@ public class TurretAiming {
         }
 
         double power = TURRET_MOVE_P * Math.abs(error) + LIMELIGHT_MIN_POWER;
-        power = Math.min(power, TURRET_SLEW_POWER_LIMIT); // Cap the power
+        power = Math.min(power, TURRET_SLEW_POWER_LIMIT);
         turretMotor.setPower(error > 0 ? power : -power);
     }
 
@@ -437,7 +434,6 @@ public class TurretAiming {
     }
 
     public void enableLimelightCorrection() {
-
         useLimelightCorrection = true;
     }
 
@@ -465,7 +461,6 @@ public class TurretAiming {
     public void setVelocityCompensation(boolean enabled) {
         useVelocityCompensation = enabled;
         if (!enabled) {
-            // Reset velocity state so it doesn't immediately snap when re-enabled
             robotVelocityX = 0;
             robotVelocityY = 0;
         }
@@ -497,6 +492,17 @@ public class TurretAiming {
 
     public boolean isAtTarget() {
         return Math.abs(targetTicks - turretMotor.getCurrentPosition()) <= TURRET_TOLERANCE_TICKS;
+    }
+
+    /**
+     * Returns true when the turret is close enough to zero (home) to trust the
+     * Limelight for an odometry correction. Uses a tighter tolerance than
+     * isAtTarget() to ensure the camera is genuinely forward-facing.
+     *
+     * The zero tick target is 0 (TURRET_HOME_ANGLE_RAD = 0.0 * ticks = 0).
+     */
+    public boolean isZeroed() {
+        return Math.abs(turretMotor.getCurrentPosition()) <= TURRET_ZERO_TOLERANCE_TICKS;
     }
 
     public boolean isUsingLimelight() {
@@ -531,25 +537,10 @@ public class TurretAiming {
         return lastTargetWasSafe;
     }
 
-    /** Get estimated robot velocity X component (inches/sec) - for telemetry */
-    public double getRobotVelocityX() {
-        return robotVelocityX;
-    }
-
-    /** Get estimated robot velocity Y component (inches/sec) - for telemetry */
-    public double getRobotVelocityY() {
-        return robotVelocityY;
-    }
-
-    /** Get the lookahead (virtual) target X - for telemetry */
-    public double getLookaheadTargetX() {
-        return lookaheadTargetX;
-    }
-
-    /** Get the lookahead (virtual) target Y - for telemetry */
-    public double getLookaheadTargetY() {
-        return lookaheadTargetY;
-    }
+    public double getRobotVelocityX() { return robotVelocityX; }
+    public double getRobotVelocityY() { return robotVelocityY; }
+    public double getLookaheadTargetX() { return lookaheadTargetX; }
+    public double getLookaheadTargetY() { return lookaheadTargetY; }
 
     // ==================== UTILITY ====================
 

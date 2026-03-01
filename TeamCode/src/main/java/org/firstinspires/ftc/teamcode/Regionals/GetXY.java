@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.testing;
+package org.firstinspires.ftc.teamcode.Regionals;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
@@ -14,8 +14,8 @@ import org.firstinspires.ftc.teamcode.pedroPathing.teleConstants;
 import org.firstinspires.ftc.teamcode.shooterConstants.ShooterConstants;
 import org.firstinspires.ftc.teamcode.shooterConstants.TurretAiming;
 
-@TeleOp(name = "STEP 2 - Turret & Shooter Test", group = "TESTING")
-public class Step2_TurretAndShooterTest extends LinearOpMode {
+@TeleOp(name = "GetXY - Pose for Auto", group = "TESTING")
+public class GetXY extends LinearOpMode {
 
     // ==================== HARDWARE ====================
     private DcMotor frontLeftDrive, frontRightDrive, backLeftDrive, backRightDrive;
@@ -95,15 +95,15 @@ public class Step2_TurretAndShooterTest extends LinearOpMode {
         frontRightDrive = hardwareMap.get(DcMotor.class, "front_right_drive");
         backLeftDrive = hardwareMap.get(DcMotor.class, "back_left_drive");
         backRightDrive = hardwareMap.get(DcMotor.class, "back_right_drive");
-        
+
         frontLeftDrive.setDirection(DcMotor.Direction.REVERSE);
         backLeftDrive.setDirection(DcMotor.Direction.REVERSE);
-        
+
         frontLeftDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         frontRightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         backLeftDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         backRightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        
+
         frontLeftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         frontRightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         backLeftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -146,7 +146,7 @@ public class Step2_TurretAndShooterTest extends LinearOpMode {
 
         // Odometry
         follower = teleConstants.createFollower(hardwareMap, telemetry);
-        follower.setStartingPose(new Pose(63.9281, 109.8185, Math.toRadians(180)));
+        follower.setStartingPose(new Pose(72, 72, Math.toRadians(0)));
     }
 
     private void handleAutomation(Pose robotPose) {
@@ -188,7 +188,7 @@ public class Step2_TurretAndShooterTest extends LinearOpMode {
         // Update aiming state
         if (isAutomationActive && !turretAiming.isAiming()) turretAiming.startAiming();
         else if (!isAutomationActive && turretAiming.isAiming()) turretAiming.stopAiming();
-        
+
         if (isAutomationActive) {
             // Explicitly enable/disable limelight correction
             if (gamepad2.dpad_up && !lastDPadUp) turretAiming.enableLimelightCorrection();
@@ -222,7 +222,7 @@ public class Step2_TurretAndShooterTest extends LinearOpMode {
 
     private void handleDrive() {
         if (gamepad1.a) maxSpeed = 0.55;
-        if (gamepad1.b) maxSpeed = 0.95;
+        if (gamepad1.b) maxSpeed = 0.93;
 
         double forward = -gamepad1.left_stick_y * maxSpeed;
         double right = gamepad1.left_stick_x * maxSpeed;
