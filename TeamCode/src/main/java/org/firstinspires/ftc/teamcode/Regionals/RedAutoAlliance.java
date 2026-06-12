@@ -21,9 +21,9 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.shooterConstants.ShooterConstants;
 import org.firstinspires.ftc.teamcode.shooterConstants.TurretAiming;
 
-@Autonomous(name = "AUTO RED Close (3) - Regionals", group = "0_Primary")
+@Autonomous(name = "Red Alliance - Heron Robotics", group = "0_Primary")
 @Configurable
-public class RedAutoFully1 extends OpMode {
+public class RedAutoAlliance extends OpMode {
 
     public Follower follower;
 
@@ -63,7 +63,7 @@ public class RedAutoFully1 extends OpMode {
     @Override
     public void init() {
         follower = Constants.createFollower(hardwareMap);
-        follower.setStartingPose(new Pose(109.794, 136.7615, Math.toRadians(270)));
+        follower.setStartingPose(new Pose(84.3222, 9.9967, Math.toRadians(0)));
 
         paths = new Paths(follower);
 
@@ -105,7 +105,7 @@ public class RedAutoFully1 extends OpMode {
         follower.update();
         turretAiming.update(follower.getPose(), follower.getPose().getHeading());
 
-        // Non-blocking turret stopper auto-return (same pattern as teleop)
+        // Non-blocking turret stopper auto-return
         if (isTurretStopperActive &&
                 System.currentTimeMillis() - turretStopperStartTime >= TURRET_STOPPER_TIME_MS) {
             turretStopperServo.setPosition(TURRET_STOPPER_HOME);
@@ -123,12 +123,12 @@ public class RedAutoFully1 extends OpMode {
     }
 
     // =====================================================================
-    //  SHOOT SEQUENCE — non-blocking, mirrors teleop exactly:
-    //    0. Start aiming + spin up shooter + set hood
-    //    1. Wait 1.0s for flywheel to reach speed (continuously update)
+    //  SHOOT SEQUENCE — non-blocking:
+    //    0. Run intake briefly to feed ring to stopper
+    //    1. Wait for ring to reach stopper
     //    2. Activate turret stopper (fire ring)
     //    3. Wait for stopper cycle to complete
-    //    4. Stop shooter, stop aiming → return true (done)
+    //    4. Stop intake → done
     // =====================================================================
     private boolean shootSequence() {
         Pose robotPose = follower.getPose();
@@ -194,95 +194,106 @@ public class RedAutoFully1 extends OpMode {
         public PathChain preLoad;
         public PathChain pickup1;
         public PathChain shoot1;
-        public PathChain openGate1;
         public PathChain intake2;
         public PathChain shoot2;
         public PathChain intake3;
         public PathChain shoot3;
         public PathChain intake4;
         public PathChain shoot4;
+        public PathChain getOut;
 
         public Paths(Follower follower) {
 
+            // Drive from start to shooting spot
             preLoad = follower.pathBuilder().addPath(
                             new BezierLine(
-                                    new Pose(109.794, 136.7615),
-                                    new Pose(83.0355, 82.8172)
+                                    new Pose(84.3222, 9.9967),
+                                    new Pose(82.5753, 19.9742)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(270), Math.toRadians(0))
+                    ).setConstantHeadingInterpolation(Math.toRadians(0))
                     .build();
 
+            // Shoot spot → ring 1 (far corner)
             pickup1 = follower.pathBuilder().addPath(
                             new BezierCurve(
-                                    new Pose(83.0355, 82.8172),
-                                    new Pose(92.296, 56.003),
-                                    new Pose(122.8798, 59.2345)
+                                    new Pose(82.5753, 19.9742),
+                                    new Pose(88.380920162, 8.815967523680643),
+                                    new Pose(131.2794316644114, 11.0044)
                             )
                     ).setConstantHeadingInterpolation(Math.toRadians(0))
                     .build();
 
+            // Ring 1 → shoot spot
             shoot1 = follower.pathBuilder().addPath(
                             new BezierLine(
-                                    new Pose(122.8798, 59.2345),
-                                    new Pose(83.0355, 82.8172)
+                                    new Pose(131.2794316644114, 11.0044),
+                                    new Pose(82.5753, 19.9742)
                             )
                     ).setConstantHeadingInterpolation(Math.toRadians(0))
                     .build();
 
-            openGate1 = follower.pathBuilder().addPath(
-                            new BezierCurve(
-                                    new Pose(83.0355, 82.8172),
-                                    new Pose(100.976, 64.217),
-                                    new Pose(125.7114, 67.6405)
-                            )
-                    ).setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(19))
-                    .build();
-
+            // Shoot spot → ring 2
             intake2 = follower.pathBuilder().addPath(
-                            new BezierLine(
-                                    new Pose(126.5114, 66.4405),
-                                    new Pose(125.1807, 54.771)
+                            new BezierCurve(
+                                    new Pose(82.5753, 19.9742),
+                                    new Pose(91.364682003, 36.654939106901224),
+                                    new Pose(116.771, 36.748)
                             )
-                    ).setConstantHeadingInterpolation(Math.toRadians(20))
+                    ).setConstantHeadingInterpolation(Math.toRadians(0))
                     .build();
 
+            // Ring 2 → shoot spot
             shoot2 = follower.pathBuilder().addPath(
                             new BezierLine(
-                                    new Pose(125.1807, 54.771),
-                                    new Pose(83.0355, 82.8172)
+                                    new Pose(116.771, 36.748),
+                                    new Pose(82.5753, 19.9742)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(20), Math.toRadians(0))
+                    ).setConstantHeadingInterpolation(Math.toRadians(0))
                     .build();
 
+            // Shoot spot → ring 3
             intake3 = follower.pathBuilder().addPath(
                             new BezierCurve(
-                                    new Pose(83.0355, 82.8172),
-                                    new Pose(83.44, 29.275),
-                                    new Pose(117.771, 34.748)
+                                    new Pose(82.5753, 19.9742),
+                                    new Pose(88.380920162, 8.815967523680643),
+                                    new Pose(131.2794316644114, 11.0044)
                             )
                     ).setConstantHeadingInterpolation(Math.toRadians(0))
                     .build();
 
+            // Ring 3 → shoot spot
             shoot3 = follower.pathBuilder().addPath(
                             new BezierLine(
-                                    new Pose(117.771, 34.748),
-                                    new Pose(83.0355, 82.8172)
+                                    new Pose(131.2794316644114, 11.0044),
+                                    new Pose(82.5753, 19.9742)
                             )
                     ).setConstantHeadingInterpolation(Math.toRadians(0))
                     .build();
 
+            // Shoot spot → ring 4
             intake4 = follower.pathBuilder().addPath(
-                            new BezierLine(
-                                    new Pose(83.0355, 82.8172),
-                                    new Pose(116.9487, 82.8172)
+                            new BezierCurve(
+                                    new Pose(82.5753, 19.9742),
+                                    new Pose(88.380920162, 8.815967523680643),
+                                    new Pose(131.2794316644114, 11.0044)
                             )
                     ).setConstantHeadingInterpolation(Math.toRadians(0))
                     .build();
 
+            // Ring 4 → shoot spot
             shoot4 = follower.pathBuilder().addPath(
                             new BezierLine(
-                                    new Pose(116.9487, 82.8172),
-                                    new Pose(80.0719, 109.8185)
+                                    new Pose(131.2794316644114, 11.0044),
+                                    new Pose(82.5753, 19.9742)
+                            )
+                    ).setConstantHeadingInterpolation(Math.toRadians(0))
+                    .build();
+
+            // Shoot spot → park
+            getOut = follower.pathBuilder().addPath(
+                            new BezierLine(
+                                    new Pose(82.5753, 19.9742),
+                                    new Pose(92.8018, 19.9742)
                             )
                     ).setConstantHeadingInterpolation(Math.toRadians(0))
                     .build();
@@ -290,106 +301,141 @@ public class RedAutoFully1 extends OpMode {
     }
 
     /* ================= STATE MACHINE ================= */
+    //
+    //  Flow:
+    //   0  → drive to shoot spot (preLoad), spin up shooter along the way
+    //   1  → wait for flywheel to reach speed
+    //   2  → shoot preload
+    //   3  → drive to ring 1 with intake running (pickup1)
+    //   4  → drive back to shoot spot (shoot1)
+    //   5  → shoot ring 1
+    //   6  → drive to ring 2 with intake running (intake2)
+    //   7  → drive back to shoot spot (shoot2)
+    //   8  → shoot ring 2
+    //   9  → drive to ring 3 with intake running (intake3)
+    //   10 → drive back to shoot spot (shoot3)
+    //   11 → shoot ring 3
+    //   12 → drive to ring 4 with intake running (intake4)
+    //   13 → drive back to shoot spot (shoot4)
+    //   14 → shoot ring 4
+    //   15 → drive to park (getOut)
+    //   default → everything off
 
     public int autonomousPathUpdate() {
         switch (pathState) {
 
-            case 0: // drive preload to shoot position — start aiming + shooter while moving
+            // ── PRELOAD ──────────────────────────────────────────────────
+            case 0:
+                // Drive to shoot spot — spin up shooter the whole way
                 turretAiming.startAiming();
-                setShooterVelocity(2530);
+                setShooterVelocity(3080);
                 hoodServo.setPosition(0.173);
                 follow(paths.preLoad);
                 if (!follower.isBusy()) advance();
                 break;
 
-            case 1: // shoot preload
-                if (shootSequence())
-                    advance();
+            case 1:
+                // Wait for flywheel to reach speed
+                turretAiming.startAiming();
+                setShooterVelocity(3080);
+                hoodServo.setPosition(0.173);
+                if (stateTimer.seconds() >= 0.55) advance();
                 break;
 
-            case 2: // intake ring 1
+            case 2:
+                // Shoot preload ring
+                if (shootSequence()) advance();
+                break;
+
+            // ── RING 1 ───────────────────────────────────────────────────
+            case 3:
+                // Drive out to ring 1 with intake running
                 intakeMotor.setVelocity(-INTAKE_VELOCITY);
                 follow(paths.pickup1);
-                if (!follower.isBusy())
-                    advance();
-                break;
-
-            case 3: // drive back to shoot position
-                intakeMotor.setVelocity(0);
-                follow(paths.shoot1);
-                if (!follower.isBusy())
-                    advance();
-                break;
-
-            case 4: // shoot ring 1
-                if (shootSequence())
-                    advance();
-                break;
-
-            case 5: // open gate
-                follow(paths.openGate1);
                 if (!follower.isBusy()) advance();
                 break;
 
-            case 6: // wait at gate with intake running
-                if (stateTimer.seconds() >= 0.01)
-                    advance(); // tune this
+            case 4:
+                // Drive back to shoot spot
+                intakeMotor.setVelocity(0);
+                follow(paths.shoot1);
+                if (!follower.isBusy()) advance();
                 break;
 
-            case 7: // intake ring 2
+            case 5:
+                // Shoot ring 1
+                if (shootSequence()) advance();
+                break;
+
+            // ── RING 2 ───────────────────────────────────────────────────
+            case 6:
+                // Drive out to ring 2 with intake running
                 intakeMotor.setVelocity(-INTAKE_VELOCITY);
                 follow(paths.intake2);
                 if (!follower.isBusy()) advance();
                 break;
 
-            case 8: // wait at intake2 position with intake still running
-                intakeMotor.setVelocity(-INTAKE_VELOCITY);
-                if (stateTimer.seconds() >= 0.52) advance(); // tune this
-                break;
-
-            case 9: // drive back to shoot position
+            case 7:
+                // Drive back to shoot spot
                 intakeMotor.setVelocity(0);
                 follow(paths.shoot2);
                 if (!follower.isBusy()) advance();
                 break;
 
-            case 10: // shoot ring 2
+            case 8:
+                // Shoot ring 2
                 if (shootSequence()) advance();
                 break;
 
-            case 11: // intake ring 3
+            // ── RING 3 ───────────────────────────────────────────────────
+            case 9:
+                // Drive out to ring 3 with intake running
                 intakeMotor.setVelocity(-INTAKE_VELOCITY);
                 follow(paths.intake3);
                 if (!follower.isBusy()) advance();
                 break;
 
-            case 12: // drive back to shoot position
+            case 10:
+                // Drive back to shoot spot
                 intakeMotor.setVelocity(0);
                 follow(paths.shoot3);
                 if (!follower.isBusy()) advance();
                 break;
 
-            case 13: // shoot ring 3
+            case 11:
+                // Shoot ring 3
                 if (shootSequence()) advance();
                 break;
 
-            case 14: // intake ring 3
+            // ── RING 4 ───────────────────────────────────────────────────
+            case 12:
+                // Drive out to ring 4 with intake running
                 intakeMotor.setVelocity(-INTAKE_VELOCITY);
                 follow(paths.intake4);
                 if (!follower.isBusy()) advance();
                 break;
 
-            case 15: // drive back to shoot position
+            case 13:
+                // Drive back to shoot spot
                 intakeMotor.setVelocity(0);
                 follow(paths.shoot4);
                 if (!follower.isBusy()) advance();
                 break;
 
-            case 16: // shoot ring 3
+            case 14:
+                // Shoot ring 4
                 if (shootSequence()) advance();
                 break;
 
-            default: // DONE — reset turret to zero
+            // ── PARK ─────────────────────────────────────────────────────
+            case 15:
+                turretAiming.goHome();
+                follow(paths.getOut);
+                if (!follower.isBusy()) advance();
+                break;
+
+            default:
+                // Fully done — everything off
                 turretAiming.goHome();
                 intakeMotor.setVelocity(0);
                 shooterMotor1.setPower(0);

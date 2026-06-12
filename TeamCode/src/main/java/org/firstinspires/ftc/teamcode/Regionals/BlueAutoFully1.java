@@ -232,14 +232,14 @@ public class BlueAutoFully1 extends OpMode {
                             new BezierCurve(
                                     new Pose(60.9645, 82.8172),
                                     new Pose(43.024, 64.217),
-                                    new Pose(17.0886, 61.5776)
+                                    new Pose(19.0886, 63.5776)
                             )
                     ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(155))
                     .build();
 
             intake2 = follower.pathBuilder().addPath(
                             new BezierLine(
-                                    new Pose(17.0886, 61.5776),
+                                    new Pose(19.0886, 63.5776),
                                     new Pose(15.9939, 52.771)
                             )
                     ).setConstantHeadingInterpolation(Math.toRadians(154))
@@ -257,14 +257,14 @@ public class BlueAutoFully1 extends OpMode {
                             new BezierCurve(
                                     new Pose(60.9645, 82.8172),
                                     new Pose(60.560, 29.275),
-                                    new Pose(27.229, 36.748)
+                                    new Pose(25.229, 37.748)
                             )
                     ).setConstantHeadingInterpolation(Math.toRadians(180))
                     .build();
 
             shoot3 = follower.pathBuilder().addPath(
                             new BezierLine(
-                                    new Pose(27.229, 36.748),
+                                    new Pose(25.229, 37.748),
                                     new Pose(60.9645, 82.8172)
                             )
                     ).setConstantHeadingInterpolation(Math.toRadians(180))

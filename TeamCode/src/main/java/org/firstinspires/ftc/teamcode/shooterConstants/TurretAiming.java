@@ -37,10 +37,10 @@ public class TurretAiming {
     // ==================== GOAL POSITIONS ====================
 
     /** RED alliance goal (x, y in inches) - TODO: SET THESE! */
-    private static final Pose RED_GOAL = new Pose(137.53044654939106, 139.9445196211096);
+    private static final Pose RED_GOAL = new Pose(140.53044654939106, 139.9445196211096);
 
     /** BLUE alliance goal (x, y in inches) - TODO: SET THESE! */
-    private static final Pose BLUE_GOAL = new Pose(13.4695534506, 139.9445196211096);
+    private static final Pose BLUE_GOAL = new Pose(13.9695534506, 139.9445196211096);
 
     private Alliance currentAlliance = Alliance.BLUE;
 

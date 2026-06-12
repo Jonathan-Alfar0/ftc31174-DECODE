@@ -17,8 +17,8 @@ import org.firstinspires.ftc.teamcode.shooterConstants.ShooterConstants;
 import org.firstinspires.ftc.teamcode.shooterConstants.TurretAiming;
 
 
-@TeleOp(name = "RED CLOSE Tele (3) - Regionals", group = "0-Primary")
-public class RedCloseTurretAndShooter extends LinearOpMode {
+@TeleOp(name = "Heron TeleOP", group = "0-Primary")
+public class HeronTeleOp extends LinearOpMode {
 
 
     // ==================== HARDWARE ====================
@@ -64,12 +64,38 @@ public class RedCloseTurretAndShooter extends LinearOpMode {
     private static final long TURRET_STOPPER_TIME_MS = 1200;
 
 
+    // ==================== MANUAL POSE RESET (GP2 X) ====================
+
+    /**
+     * TODO: Set this to the known field position the robot will be at
+     *       when the driver presses X to correct odometry drift.
+     *       x, y in inches, heading in degrees (converted below).
+     */
+    private static final Pose MANUAL_RESET_POSE = new Pose(
+            7.7534,                 // <-- TODO: replace with your desired X (inches)
+            9.0261,                 // <-- TODO: replace with your desired Y (inches)
+            Math.toRadians(0)  // <-- TODO: replace with your desired heading (degrees)
+    );
+
+    /**
+     * IDLE      — normal operation
+     * RESETTING — pose was just applied, turret driving to zero
+     * ZEROED    — turret confirmed at zero, ready to resume automation
+     */
+    private enum PoseResetState { IDLE, RESETTING, ZEROED }
+    private PoseResetState poseResetState = PoseResetState.IDLE;
+
+    // Tracks the pose that was last applied so telemetry can confirm it
+    private Pose lastAppliedResetPose = null;
+
+
     // ==================== BUTTON DEBOUNCING ====================
     private boolean lastLeftBumper = false;
     private boolean lastYButton = false;
     private boolean lastDPadUp = false;
     private boolean lastDPadDown = false;
     private boolean lastRightTrigger = false;
+    private boolean lastXButton = false;
 
 
     @Override
@@ -81,7 +107,8 @@ public class RedCloseTurretAndShooter extends LinearOpMode {
         turretAiming.disableLimelightCorrection(); // Prioritize Odometry
 
 
-        telemetry.addLine("### STEP 2: Turret & Shooter Test ###");
+        telemetry.addLine("### Heron TeleOP ###");
+        telemetry.addLine("GP2 X = Manual Pose Reset (drift fix)");
         telemetry.addLine("Ready to Start!");
         telemetry.update();
 
@@ -93,7 +120,7 @@ public class RedCloseTurretAndShooter extends LinearOpMode {
             follower.update();
             Pose robotPose = follower.getPose();
 
-
+            handleManualPoseReset(robotPose); // Must run before automation
             handleDrive();
             handleIntake();
             handleAutomation(robotPose);
@@ -102,6 +129,71 @@ public class RedCloseTurretAndShooter extends LinearOpMode {
 
 
         shutdownRobot();
+    }
+
+
+    // ==================== MANUAL POSE RESET (GP2 X) ====================
+
+    /**
+     * Single press of GP2 X:
+     *   1. Immediately snaps follower pose to MANUAL_RESET_POSE
+     *   2. Sends turret to zero (goHome)
+     *   3. Once turret reports zeroed → state becomes ZEROED
+     *   4. Driver can now press L_Bumper to enable automation —
+     *      the follower already has the corrected pose so turret aims correctly
+     *
+     * A second X press at any point cancels back to IDLE.
+     */
+    private void handleManualPoseReset(Pose robotPose) {
+        boolean xPressed = gamepad2.x && !lastXButton;
+        lastXButton = gamepad2.x;
+
+        switch (poseResetState) {
+
+            case IDLE:
+                if (xPressed) {
+                    // Apply the pose correction immediately
+                    follower.setPose(MANUAL_RESET_POSE);
+                    lastAppliedResetPose = MANUAL_RESET_POSE;
+
+                    // Pause automation and send turret home
+                    isAutomationActive = false;
+                    isShooterOn = false;
+                    turretAiming.stopAiming();
+                    turretAiming.goHome();
+
+                    poseResetState = PoseResetState.RESETTING;
+                }
+                break;
+
+            case RESETTING:
+                // Keep driving turret home until zeroed
+                if (!turretAiming.isAiming()) turretAiming.goHome();
+
+                if (turretAiming.isZeroed()) {
+                    poseResetState = PoseResetState.ZEROED;
+                }
+
+                // Cancel with second X press
+                if (xPressed) {
+                    poseResetState = PoseResetState.IDLE;
+                }
+                break;
+
+            case ZEROED:
+                // Auto-clear once automation is re-enabled via L_Bumper
+                if (isAutomationActive) {
+                    poseResetState = PoseResetState.IDLE;
+                }
+                // Allow re-triggering X to run another reset
+                if (xPressed) {
+                    follower.setPose(MANUAL_RESET_POSE);
+                    lastAppliedResetPose = MANUAL_RESET_POSE;
+                    turretAiming.goHome();
+                    poseResetState = PoseResetState.RESETTING;
+                }
+                break;
+        }
     }
 
 
@@ -139,8 +231,8 @@ public class RedCloseTurretAndShooter extends LinearOpMode {
         shooterMotor2 = hardwareMap.get(DcMotorEx.class, "shooter_motor2");
         shooterMotor1.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         shooterMotor2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        shooterMotor1.setDirection(DcMotorEx.Direction.FORWARD); // FIX: To shoot outward
-        shooterMotor2.setDirection(DcMotorEx.Direction.REVERSE); // FIX: To shoot outward
+        shooterMotor1.setDirection(DcMotorEx.Direction.FORWARD);
+        shooterMotor2.setDirection(DcMotorEx.Direction.REVERSE);
         shooterMotor1.setVelocityPIDFCoefficients(shooter_kP, shooter_kI, shooter_kD, shooter_kF);
         shooterMotor2.setVelocityPIDFCoefficients(shooter_kP, shooter_kI, shooter_kD, shooter_kF);
 
@@ -154,7 +246,7 @@ public class RedCloseTurretAndShooter extends LinearOpMode {
         turretStopperServo.setDirection(Servo.Direction.REVERSE);
 
 
-        turretMotor = hardwareMap.get (DcMotorEx.class, "turret_motor");
+        turretMotor = hardwareMap.get(DcMotorEx.class, "turret_motor");
         turretMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         turretMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         turretMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -172,7 +264,7 @@ public class RedCloseTurretAndShooter extends LinearOpMode {
 
         // Odometry
         follower = teleConstants.createFollower(hardwareMap, telemetry);
-        follower.setStartingPose(new Pose(80.0719, 109.8185, Math.toRadians(0)));
+        follower.setStartingPose(new Pose(92.8018, 19.9742, Math.toRadians(0)));
     }
 
 
@@ -188,8 +280,9 @@ public class RedCloseTurretAndShooter extends LinearOpMode {
         }
 
 
-        // Main automation toggle (Left Bumper)
-        if (gamepad2.left_bumper && !lastLeftBumper) {
+        // Main automation toggle (Left Bumper) — blocked while pose is RESETTING
+        if (poseResetState != PoseResetState.RESETTING
+                && gamepad2.left_bumper && !lastLeftBumper) {
             isAutomationActive = !isAutomationActive;
             if (!isAutomationActive) isShooterOn = false;
         }
@@ -216,19 +309,18 @@ public class RedCloseTurretAndShooter extends LinearOpMode {
         }
 
 
-        // Update aiming state
-        if (isAutomationActive && !turretAiming.isAiming()) turretAiming.startAiming();
-        else if (!isAutomationActive && turretAiming.isAiming()) turretAiming.stopAiming();
+        // Aiming state sync — don't fight goHome() while resetting
+        if (poseResetState != PoseResetState.RESETTING) {
+            if (isAutomationActive && !turretAiming.isAiming()) turretAiming.startAiming();
+            else if (!isAutomationActive && turretAiming.isAiming()) turretAiming.stopAiming();
+        }
 
 
         if (isAutomationActive) {
-            // Explicitly enable/disable limelight correction
             if (gamepad2.dpad_up && !lastDPadUp) turretAiming.enableLimelightCorrection();
             if (gamepad2.dpad_down && !lastDPadDown) turretAiming.disableLimelightCorrection();
 
-
             if (gamepad2.y && !lastYButton) turretAiming.toggleVelocityCompensation();
-            if (gamepad2.x) turretAiming.goHome();
             if (gamepad2.back) { isAutomationActive = false; isShooterOn = false; }
         }
         lastDPadUp = gamepad2.dpad_up;
@@ -245,9 +337,7 @@ public class RedCloseTurretAndShooter extends LinearOpMode {
             targetRPM = ShooterConstants.targetRPM(distance);
             hoodPosition = ShooterConstants.hoodPosition(distance);
 
-
             hoodServo.setPosition(hoodPosition);
-
 
             if (isShooterOn) setShooterVelocity(targetRPM);
             else { shooterMotor1.setPower(0); shooterMotor2.setPower(0); }
@@ -317,6 +407,43 @@ public class RedCloseTurretAndShooter extends LinearOpMode {
         telemetry.addData("Intake Vel", "%.1f", intakeMotor.getVelocity());
         telemetry.addLine();
 
+        // ── Manual Pose Reset Telemetry ──────────────────────────────────────
+        telemetry.addLine("--- Manual Pose Reset (GP2 X) ---");
+        telemetry.addData("Reset State", poseResetState.name());
+        telemetry.addData("Reset Pose (target)",
+                "(%.2f, %.2f, %.1f°)",
+                MANUAL_RESET_POSE.getX(),
+                MANUAL_RESET_POSE.getY(),
+                Math.toDegrees(MANUAL_RESET_POSE.getHeading()));
+        telemetry.addData("Follower Pose (live)",
+                "(%.2f, %.2f, %.1f°)",
+                robotPose.getX(),
+                robotPose.getY(),
+                Math.toDegrees(robotPose.getHeading()));
+        if (lastAppliedResetPose != null) {
+            telemetry.addData("Last Applied Reset",
+                    "(%.2f, %.2f, %.1f°)",
+                    lastAppliedResetPose.getX(),
+                    lastAppliedResetPose.getY(),
+                    Math.toDegrees(lastAppliedResetPose.getHeading()));
+        } else {
+            telemetry.addData("Last Applied Reset", "None yet");
+        }
+        switch (poseResetState) {
+            case IDLE:
+                telemetry.addData("Action", "Press X to reset pose & home turret");
+                break;
+            case RESETTING:
+                telemetry.addData("Action", "Turret homing... wait for ZEROED");
+                telemetry.addData("Turret Zeroed", turretAiming.isZeroed() ? "YES ✓" : "NO - moving...");
+                telemetry.addData("Turret Ticks (raw)", turretAiming.getCurrentTicks());
+                break;
+            case ZEROED:
+                telemetry.addData("Action", "Pose set + turret zeroed! Press L_Bumper to aim");
+                telemetry.addData("Turret Zeroed", "YES ✓");
+                break;
+        }
+        telemetry.addLine();
 
         telemetry.addLine("--- GP2 Aiming Controls ---");
         telemetry.addData("Alliance (A/B)", currentAlliance);
@@ -336,4 +463,3 @@ public class RedCloseTurretAndShooter extends LinearOpMode {
         telemetry.update();
     }
 }
-
